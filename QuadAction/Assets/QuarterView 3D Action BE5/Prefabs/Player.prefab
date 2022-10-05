@@ -77,7 +77,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c58ef85940e3141da87b48bf5987adbe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  followCamera: {fileID: 0}
   speed: 15
+  weaponse: []
+  hasWeapon: 
+  ammo: 0
+  coin: 0
+  health: 0
+  Maxammo: 0
+  Maxcoin: 0
+  Maxhealth: 0
+  MaxhasGrenade: 0
+  grenades: []
+  hasGrenades: 0
+  grenade: {fileID: 0}
 --- !u!1001 &2591981138735232044
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -95,7 +108,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: cae3f9537776dea41855a724b56dd2c9, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.2
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: cae3f9537776dea41855a724b56dd2c9, type: 3}
       propertyPath: m_LocalPosition.z

@@ -1986,7 +1986,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7988094277207216310, guid: 83dab506297948d4d8d34c4fe12431ee, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7988094277207216310, guid: 83dab506297948d4d8d34c4fe12431ee, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -2688,6 +2688,14 @@ PrefabInstance:
     - target: {fileID: 1671831298, guid: 8f5e135a19626f544908fc8f156144b9, type: 3}
       propertyPath: m_Radius
       value: 1.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 1671831298, guid: 8f5e135a19626f544908fc8f156144b9, type: 3}
+      propertyPath: m_Center.y
+      value: 0.72
+      objectReference: {fileID: 0}
+    - target: {fileID: 1671831298, guid: 8f5e135a19626f544908fc8f156144b9, type: 3}
+      propertyPath: m_Direction
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1671831299, guid: 8f5e135a19626f544908fc8f156144b9, type: 3}
       propertyPath: m_Constraints

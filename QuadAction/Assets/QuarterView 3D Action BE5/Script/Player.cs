@@ -1,14 +1,5 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Net.Http.Headers;
-using System.Security.Cryptography;
-using Unity.VisualScripting.Antlr3.Runtime.Tree;
-using UnityEditor.IMGUI.Controls;
 using UnityEngine;
-using UnityEngine.PlayerLoop;
-using UnityEngine.Timeline;
 
 public class Player : MonoBehaviour
 {
@@ -33,6 +24,8 @@ public class Player : MonoBehaviour
     private bool iDown;
     private Vector3 move;
     private Vector3 dodgeVec;
+    private Vector3 lastDir;
+    private Vector3 nextVec;
     private Animator anim;
     private bool walkDown;
     private bool jJump;
@@ -50,7 +43,7 @@ public class Player : MonoBehaviour
     private bool isReload;
     private bool isBorder;
     private bool isDamage;
-    
+
     private GameObject nearObj;
     private Weapon equipObj;
     private MeshRenderer[] meshs;
@@ -58,7 +51,7 @@ public class Player : MonoBehaviour
     private int eqipWeaponIndex = -1;
     private float fireDelay;
     private bool bossAttack;
-    
+
 
     private void Awake()
     {
@@ -112,9 +105,9 @@ public class Player : MonoBehaviour
         {
             Move();
         }
-        
-        FreezRotation();
-        StopToWall();
+
+        //FreezRotation();
+        //StopToWall();
     }
 
     void StopToWall()
@@ -141,7 +134,7 @@ public class Player : MonoBehaviour
         {
             anim.SetTrigger("doReload");
             isReload = true;
-            
+
             Invoke("ReloadOut", 3f);
         }
     }
@@ -196,24 +189,26 @@ public class Player : MonoBehaviour
 
         if (isSwap || !isFireReady || isReload)
         {
-            move = Vector3.zero;
+            rb.velocity = Vector3.zero;
         }
 
         if (!isBorder)
         {
-            rb.velocity = move * speed;
-            // * (walkDown ? 0.3f : 1f);
-            //transform.position += move * speed * (walkDown ? 0.3f : 1f) * Time.deltaTime;
+            rb.velocity = new Vector3(move.x * speed, rb.velocity.y, move.z * speed);
         }
-        
+
         anim.SetBool("isRun", move != Vector3.zero);
         anim.SetBool("isWalk", walkDown);
     }
 
     void Turn()
     {
-        //키보드에 의한 회전
-        transform.LookAt(transform.position + move);
+        if (move != Vector3.zero)
+        {
+            lastDir = move;
+        }
+
+        transform.rotation = Quaternion.LookRotation(lastDir);
 
         //마우스에 의한 회전
         if (fDown)
@@ -222,9 +217,10 @@ public class Player : MonoBehaviour
             RaycastHit rayHit;
             if (Physics.Raycast(ray, out rayHit, 100f))
             {
-                Vector3 nextVec = rayHit.point - gameObject.transform.position;
-                nextVec.y = 0;
-                transform.LookAt(transform.position + nextVec);
+                nextVec = rayHit.point - gameObject.transform.position;
+                nextVec.y = 0; //캐릭터가 위를 보지 못하도록
+                transform.rotation = Quaternion.LookRotation(nextVec);
+                lastDir = nextVec;
             }
         }
     }
@@ -233,9 +229,9 @@ public class Player : MonoBehaviour
     {
         if (move == Vector3.zero && jJump && !isJump && !isDodge && !isSwap)
         {
+            rb.AddForce(Vector3.up * 15f, ForceMode.Impulse);
             anim.SetTrigger("doJump");
             anim.SetBool("isJump", true);
-            rb.AddForce(Vector3.up * 15f, ForceMode.Impulse);
             isJump = true;
         }
     }
@@ -244,6 +240,7 @@ public class Player : MonoBehaviour
     {
         if (collision.transform.tag == "Floor")
         {
+            anim.SetBool("isGround", true);
             anim.SetBool("isJump", false);
             isJump = false;
         }
@@ -264,8 +261,9 @@ public class Player : MonoBehaviour
                     {
                         ammo = Maxammo;
                     }
+
                     break;
-                
+
                 case Item.Type.Coin:
                     coin += item.value;
 
@@ -273,8 +271,9 @@ public class Player : MonoBehaviour
                     {
                         coin = Maxcoin;
                     }
+
                     break;
-                
+
                 case Item.Type.Heart:
                     health += item.value;
 
@@ -282,8 +281,9 @@ public class Player : MonoBehaviour
                     {
                         health = Maxhealth;
                     }
+
                     break;
-                
+
                 case Item.Type.Grenade:
                     grenades[hasGrenades].SetActive(true);
                     hasGrenades += item.value;
@@ -292,8 +292,10 @@ public class Player : MonoBehaviour
                     {
                         hasGrenades = MaxhasGrenade;
                     }
+
                     break;
             }
+
             Destroy(other.gameObject);
         }
         else if (other.tag == "EnemyBullet")
@@ -304,15 +306,10 @@ public class Player : MonoBehaviour
                 health -= enemyBullet.damage;
 
                 bool bossAttack = other.name == "Boss MeleeArea";
-                
-                if (bossAttack)
-                {
-                    Debug.Log("attack");
-                    rb.AddForce(transform.forward * -25f, ForceMode.Impulse);
-                }
 
                 StartCoroutine(OnDamage(bossAttack));
             }
+
             if (other.GetComponent<Rigidbody>() != null) //무적시간때도 미사일은 플레이어에 맞아도 사라져야 함.
             {
                 Destroy(other.gameObject);
@@ -324,14 +321,21 @@ public class Player : MonoBehaviour
     {
         isDamage = true;
 
-        
         foreach (var mesh in meshs)
         {
             mesh.material.color = Color.yellow;
         }
-        
+
+        if (bossAttack)
+        {
+            Debug.Log("attack");
+            rb.AddForce(-transform.forward * 1000f, ForceMode.Impulse);
+        }
+
         yield return new WaitForSeconds(1f);
-        
+
+        isDamage = false;
+
         foreach (var mesh in meshs)
         {
             mesh.material.color = Color.white;
@@ -341,8 +345,6 @@ public class Player : MonoBehaviour
         {
             rb.velocity = Vector3.zero;
         }
-
-        isDamage = false;
     }
 
     private void OnTriggerStay(Collider other)
@@ -350,7 +352,6 @@ public class Player : MonoBehaviour
         if (other.tag == "Weapon")
         {
             nearObj = other.gameObject;
-            
         }
     }
 
@@ -389,7 +390,7 @@ public class Player : MonoBehaviour
             {
                 Item item = nearObj.GetComponent<Item>();
                 int weaponIndex = item.value;
-                
+
                 hasWeapon[weaponIndex] = true;
                 Destroy(nearObj);
             }
@@ -398,7 +399,6 @@ public class Player : MonoBehaviour
 
     void Swap()
     {
-        Debug.Log(eqipWeaponIndex);
         if (sDown1 && (!hasWeapon[0] || eqipWeaponIndex == 0)) return;
         if (sDown2 && (!hasWeapon[1] || eqipWeaponIndex == 1)) return;
         if (sDown3 && (!hasWeapon[2] || eqipWeaponIndex == 2)) return;
@@ -416,9 +416,9 @@ public class Player : MonoBehaviour
             eqipWeaponIndex = weaponIndex;
             equipObj = weaponse[weaponIndex].GetComponent<Weapon>();
             equipObj.gameObject.SetActive(true);
-                
+
             anim.SetTrigger("doSwap");
-            
+
             isSwap = true;
 
             Invoke("SwapOut", 0.4f);

@@ -124,7 +124,7 @@ public class Boss : Enemy
 
         meleeArea.enabled = true;
         
-        yield return new WaitForSeconds(1.0f);
+        yield return new WaitForSeconds(0.5f);
         
         meleeArea.enabled = false;
         
