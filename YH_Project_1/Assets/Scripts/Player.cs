@@ -8,10 +8,17 @@ public class Player : MonoBehaviour
 
     Rigidbody playerRigidbody;
     Animator playerAnimator;
-    Vector3 direction;
+    float hAxis, vAxis;
+    Vector3 moveDirection;
     Vector3 dodgeDirection;
 
-    bool isDodge;
+    public Gun equipGun;
+    //public GameObject[] gunList;
+
+    float shotDelay;
+
+    bool doDodge, doShot, doSwap;
+    bool isDodge, isShotReady;
 
     void Awake()
     {
@@ -26,34 +33,44 @@ public class Player : MonoBehaviour
 
     void Update()
     {
-        Move();
+        GetInput();
         Dodge();
+        Shot();
+        Swap();
     }
 
     void FixedUpdate()
     {
-        
+        Move();
         Rotate();
+    }
+
+    void GetInput()
+    {
+        hAxis = Input.GetAxisRaw("Horizontal");
+        vAxis = Input.GetAxisRaw("Vertical");
+        doDodge = Input.GetKeyDown(KeyCode.Space);
+        doShot = Input.GetButtonDown("Fire1");
+        doSwap = Input.GetKeyDown(KeyCode.Alpha1);
     }
 
     void Move()
     {
-        if (!isDodge)
-        {
-            float x = Input.GetAxisRaw("Horizontal");
-            float z = Input.GetAxisRaw("Vertical");
+        moveDirection = new Vector3(hAxis, 0, vAxis).normalized;
+        if (isDodge) moveDirection = dodgeDirection;
 
-            direction = new Vector3(x, 0, z).normalized;
+        playerRigidbody.velocity = moveDirection * moveSpeed;
 
-            playerRigidbody.velocity = direction * moveSpeed;
-
-            playerAnimator.SetBool("isRun", direction != Vector3.zero);
-        }
+        playerAnimator.SetBool("isRun", moveDirection != Vector3.zero);
     }
 
     void Rotate()
     {
-        if (!isDodge)
+        if (isDodge)
+        {
+            transform.rotation = Quaternion.LookRotation(moveDirection);
+        }
+        else
         {
             Ray cameraRay = Camera.main.ScreenPointToRay(Input.mousePosition);
             Plane plane = new Plane(Vector3.up, Vector3.zero);
@@ -70,23 +87,15 @@ public class Player : MonoBehaviour
 
     void Dodge()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (doDodge && !isDodge && moveDirection != Vector3.zero)
         {
-            if (!isDodge)
-            {
-                dodgeDirection = direction;
-                transform.LookAt(dodgeDirection);
+            dodgeDirection = moveDirection;
+            moveSpeed *= 2f;
 
-                moveSpeed *= 2f;
+            isDodge = true;
+            Invoke("DodgeOff", 0.5f);
 
-                isDodge = true;
-                Invoke("DodgeOff", 0.3f);
-
-                playerAnimator.SetTrigger("doDodge");
-            }
-
-
-
+            playerAnimator.SetTrigger("doDodge");
         }
     }
 
@@ -95,5 +104,31 @@ public class Player : MonoBehaviour
         moveSpeed *= 0.5f;
 
         isDodge = false;
+    }
+
+    void Shot()
+    {
+        if (equipGun == null) return;
+
+        shotDelay += Time.deltaTime;
+        isShotReady = equipGun.rate < shotDelay;
+
+        if (doShot && isShotReady && !isDodge)//  && !isSwap)
+        {
+            equipGun.Shot();
+
+            playerAnimator.SetTrigger("doShot");
+
+            shotDelay = 0;
+        }
+        
+    }
+
+    void Swap()
+    {
+        if (doSwap)
+        {
+            playerAnimator.SetTrigger("doSwap");
+        }
     }
 }

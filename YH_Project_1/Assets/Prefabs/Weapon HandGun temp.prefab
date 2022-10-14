@@ -5003,7 +5003,7 @@ GameObject:
   - component: {fileID: 4300898706824328674}
   - component: {fileID: 5541596287473438431}
   m_Layer: 0
-  m_Name: Weapon HandGun
+  m_Name: Weapon HandGun temp
   m_TagString: Weapon
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
