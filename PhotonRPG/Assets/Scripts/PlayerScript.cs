@@ -13,6 +13,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks, IPunObservable
     [Header("ETC")]
     public Rigidbody RB;
     public Animator AN;
+    public Animator[] weaponAN;
     public SpriteRenderer SR;
     public PhotonView PV;
     public TextMeshProUGUI NickNameText;
@@ -24,6 +25,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks, IPunObservable
     [Header("PlayerStat")]
     public float moveSpeed;
     GameObject nearObject;
+    GameObject equipWeapon;
 
     Vector3 moveVec;
     Vector3 dodgeVec;
@@ -33,10 +35,16 @@ public class PlayerScript : MonoBehaviourPunCallbacks, IPunObservable
     bool jDown;
     bool iDown;
     bool isDodge;
+    bool isSwap;
+    int equipWeaponIndex = -1;
 
     [Header("Weapon & Item")]
     public GameObject[] weapons;
     public bool[] hasWeapons;
+
+    private bool sDown1;
+    // private bool sDown2;
+    // private bool sDown3;
 
     [Header("Photon")]
     public string playerName;
@@ -71,6 +79,8 @@ public class PlayerScript : MonoBehaviourPunCallbacks, IPunObservable
         {
             if (i == n)
                 transform.GetChild(i).gameObject.SetActive(true);
+            else if (transform.GetChild(i).name == "Weapon Point")
+                transform.GetChild(i).gameObject.SetActive(true);
             else if (i == transform.childCount - 1)
                 transform.GetChild(i).gameObject.SetActive(true);
             else
@@ -93,7 +103,9 @@ public class PlayerScript : MonoBehaviourPunCallbacks, IPunObservable
             }
 
             // 대시 
-            if (jDown && moveVec != Vector3.zero && !isDodge) PV.RPC("Dodge", RpcTarget.All);
+            if (jDown && moveVec != Vector3.zero && !isDodge && !isSwap) PV.RPC("Dodge", RpcTarget.All);
+
+            Swap();
 
             Interaction();
             // 스페이스 총알 발사
@@ -119,6 +131,7 @@ public class PlayerScript : MonoBehaviourPunCallbacks, IPunObservable
         wDown = Input.GetButton("Walk");
         jDown = Input.GetButtonDown("Jump");
         iDown = Input.GetButtonDown("Interaction");
+        sDown1 = Input.GetButtonDown("Swap1");
     }
 
     void Move()
@@ -129,11 +142,28 @@ public class PlayerScript : MonoBehaviourPunCallbacks, IPunObservable
         if (isDodge)
             moveVec = dodgeVec;
 
+        if (isSwap)
+            moveVec = Vector3.zero;
+
         // transform.position += moveVec * moveSpeed * (wDown ? 0.3f : 1f) * Time.deltaTime;
         RB.velocity = new Vector3(moveSpeed * hAxis, RB.velocity.y, moveSpeed * vAxis);
 
         AN.SetBool("isRun", moveVec != Vector3.zero);
         AN.SetBool("isWalk", wDown);
+        foreach (Animator ani in weaponAN)
+        {
+            ani.SetBool("isH", hAxis != 0);
+            if (hAxis == 0)
+            {
+                ani.transform.localRotation = Quaternion.Euler(0, 0, 0);
+                ani.transform.localPosition = new Vector3(0, 0, 0);
+            }
+
+            if (vAxis > 0)
+                ani.SetBool("isR", true);
+            else if (vAxis < 0)
+                ani.SetBool("isR", false);
+        }
 
         if (!isDodge)
         {
@@ -199,6 +229,46 @@ public class PlayerScript : MonoBehaviourPunCallbacks, IPunObservable
             HealthImage.fillAmount = (float)stream.ReceiveNext();
             // nearObject = (GameObject)stream.ReceiveNext();
         }
+    }
+
+    void Swap()
+    {
+        if (sDown1 && (!hasWeapons[0] || equipWeaponIndex == 0))
+            return;
+
+        int weaponIndex = -1;
+        if (sDown1) weaponIndex = 0;
+
+        if (sDown1 && !isDodge) // || sDown2 || sDown3 ...
+        {
+            PV.RPC("SwapWeapon", RpcTarget.AllBuffered, weaponIndex);
+            isSwap = true;
+            Invoke("SwapOut", 0.4f);
+        }
+    }
+
+    [PunRPC]
+    void SwapWeapon(int weaponIndex)
+    {
+        if (weapons[weaponIndex].activeSelf)
+        {
+            equipWeapon = null;
+            equipWeaponIndex = -1;
+            weapons[weaponIndex].SetActive(false);
+        }
+        else
+        {
+            if (equipWeapon != null)
+                equipWeapon.SetActive(false);
+            equipWeapon = weapons[weaponIndex];
+            equipWeaponIndex = weaponIndex;
+            equipWeapon.SetActive(true);
+        }
+    }
+
+    void SwapOut()
+    {
+        isSwap = false;
     }
 
     void Interaction()
